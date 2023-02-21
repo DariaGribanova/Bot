@@ -14,7 +14,7 @@ public class Weather {
         URL myURL = new URL("https://api.ckbxeu.com/v1/crs/surveys");
         HttpURLConnection myURLConnection = (HttpURLConnection)myURL.openConnection();
 
-        String basicAuth = "Bearer " + new String("eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiZGFzaGljaGdyQGdtYWlsLmNvbSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWVpZGVudGlmaWVyIjoiZGFzaGljaGdyQGdtYWlsLmNvbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IlN5c3RlbSBBZG1pbmlzdHJhdG9yIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS9pZGVudGl0eS9jbGFpbXMvdGVuYW50aWQiOiJjcnMiLCJuYmYiOjE2NzY5Nzk1MTEsImV4cCI6MTY3NzAyMjcxMSwiaXNzIjoiYXBpLmNoZWNrYm94LmNvbSIsImF1ZCI6IkFwaSJ9.iounwNnhDd2OcpRo2OwA42R5cbHdBM5lr1Yi7Jzj2ug");
+        String basicAuth = "Bearer " + new String(".eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiZGFzaGljaGdyQGdtYWlsLmNvbSIsImh0dHA6Ly9zY2hlbWFzLnhtbHNvYXAub3JnL3dzLzIwMDUvMDUvaWRlbnRpdHkvY2xhaW1zL25hbWVpZGVudGlmaWVyIjoiZGFzaGljaGdyQGdtYWlsLmNvbSIsImh0dHA6Ly9zY2hlbWFzLm1pY3Jvc29mdC5jb20vd3MvMjAwOC8wNi9pZGVudGl0eS9jbGFpbXMvcm9sZSI6IlN5c3RlbSBBZG1pbmlzdHJhdG9yIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS9pZGVudGl0eS9jbGFpbXMvdGVuYW50aWQiOiJjcnMiLCJuYmYiOjE2NzY5Nzk1MTEsImV4cCI6MTY3NzAyMjcxMSwiaXNzIjoiYXBpLmNoZWNrYm94LmNvbSIsImF1ZCI6IkFwaSJ9.iounwNnhDd2OcpRo2OwA42R5cbHdBM5lr1Yi7Jzj2ug");
         myURLConnection.setRequestProperty("Accept", "application/json");
         myURLConnection.setRequestProperty ("Authorization", basicAuth);
         myURLConnection.setRequestMethod("GET");
