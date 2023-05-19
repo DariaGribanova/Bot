@@ -12,13 +12,13 @@ import java.util.*;
 import java.util.UUID;
 
 public class Connection {
-    private String TOKEN = "eyJhbGciOiJodHRwOi8vd3d3LnczLm9yZy8yMDAxLzA0L3htbGRzaWctbW9yZSNobWFjLXNoYTI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoiZGF3YU9wZW5BSUBnbWFpbC5jb20iLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6ImRhd2FPcGVuQUlAZ21haWwuY29tIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiU3lzdGVtIEFkbWluaXN0cmF0b3IiLCJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL2lkZW50aXR5L2NsYWltcy90ZW5hbnRpZCI6ImNyczQiLCJuYmYiOjE2ODMyMzIzNTAsImV4cCI6MTY4MzI3NTU1MCwiaXNzIjoiYXBpLmNoZWNrYm94LmNvbSIsImF1ZCI6IkFwaSJ9.X3y08zYZJyYc9lverBs8taj4X6ktKp-Dpm1q4xN1k2M";
-    private String NAME = "dawaOpenAI@gmail.com";
-    private String PASSWORD = "@cnu@Z2dPTURZaA";
-    private String MYURL = "https://api.checkbox.com/v1/crs4/";
-    private Map<Long, List<Integer>> pagesMap = new HashMap<Long, List<Integer>>();
+    private String TOKEN = "";
+    private final String NAME = "dawagrib5@gmail.com";
+    private final String PASSWORD = "xfnz@6QVMGM9YMY";
+    private final String ACCNAME = "crs5";
+    private final String MYURL = "https://api.checkbox.com/v1/"+ACCNAME+"/";
 
-    public String getToken() throws IOException {
+    public void getToken() throws IOException {
         URL myURL = new URL(MYURL+ "oauth2/token");
         HttpURLConnection myURLConnection = (HttpURLConnection) myURL.openConnection();
         myURLConnection.setRequestMethod("POST");
@@ -29,32 +29,25 @@ public class Connection {
         os.write(s1.getBytes());
         os.flush();
         os.close();
-
-
         int responseCode = myURLConnection.getResponseCode();
-        System.out.println("POST Response Code :: " + responseCode);
         if (responseCode == HttpURLConnection.HTTP_OK) { //success
             BufferedReader in = new BufferedReader(new InputStreamReader(myURLConnection.getInputStream()));
             String inputLine;
-            StringBuffer response = new StringBuffer();
+            StringBuilder response = new StringBuilder();
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
             }
             in.close();
-
             String res = String.valueOf(response);
             JSONObject object = new JSONObject(res);
             this.TOKEN = object.getString("access_token");
             System.out.println(object.getString("access_token"));
-
         } else {
             System.out.println("POST request did not work.");
         }
-        return null;
     }
 
     public void sendResponse(Long surveyId, List<Question> questions) throws IOException {
-        System.out.println(questions);
         UUID uniqueKey = UUID.randomUUID();
         String id = "";
         URL myURL = new URL(MYURL + "surveys/"+surveyId+"/responses");
@@ -66,28 +59,24 @@ public class Connection {
         String jsonInputString = "{\"language\":\"en-US\",\"is_test\":false,\"hidden_items\":[],\n" +
                 "\"anonymous_respondent_id\":\""+uniqueKey+"\"}";
         try (OutputStream os = myURLConnection.getOutputStream()) {
-            byte[] input = jsonInputString.getBytes("utf-8");
+            byte[] input = jsonInputString.getBytes(StandardCharsets.UTF_8);
             os.write(input, 0, input.length);
         }
         int responseCode = myURLConnection.getResponseCode();
         if (responseCode == HttpURLConnection.HTTP_OK) { //success
             BufferedReader in = new BufferedReader(new InputStreamReader(myURLConnection.getInputStream()));
             String inputLine;
-            StringBuffer response = new StringBuffer();
+            StringBuilder response = new StringBuilder();
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
             }
             in.close();
-
             String res = String.valueOf(response);
-            System.out.println(response);
             JSONObject object = new JSONObject(res);
             id = String.valueOf(object.get("id"));
-            System.out.println(id);
-
         }
-
-            for (Integer page : pagesMap.get(surveyId)) {
+            List<Integer> pageList = getPages(String.valueOf(surveyId));
+            for (Integer page : pageList) {
                 URL myURL2 = new URL(MYURL + "surveys/" + surveyId + "/responses/" + id + "/current-page");
                 HttpURLConnection myURLConnection2 = (HttpURLConnection) myURL2.openConnection();
                 myURLConnection2.setRequestMethod("POST");
@@ -108,56 +97,30 @@ public class Connection {
                             }
                             jsonInputString2.append(",");
                         }
-
                     }
                     jsonInputString2.deleteCharAt(jsonInputString2.length()-1);
-
-
                 jsonInputString2.append("]}");
                 String str = String.valueOf(jsonInputString2);
-                //String jsonInputString2 = "{\"page_id\":1173,\"action\":\"MoveForward\",\"items\":[{\"item_id\":1894,\"answer\":{\"answer_type\":\"Text\",\"text\":\"1357\",\"is_required\":false,\"is_soft_required\":false}}]}";
-
                 try (OutputStream os = myURLConnection2.getOutputStream()) {
                     byte[] input = str.getBytes(StandardCharsets.UTF_8);
                     os.write(input, 0, input.length);
                 }
-
-
-                int responseCode2 = myURLConnection2.getResponseCode();
-
-                if (responseCode2 == HttpURLConnection.HTTP_OK) { //success
-                    BufferedReader in2 = new BufferedReader(new InputStreamReader(myURLConnection2.getInputStream()));
-                    String inputLine2;
-                    StringBuffer response2 = new StringBuffer();
-                    while ((inputLine2 = in2.readLine()) != null) {
-                        response2.append(inputLine2);
-                    }
-                    in2.close();
-
-                    System.out.println(response2);
-
-                } else {
-                    System.out.println("POST request did not work.");
-                }
+                myURLConnection2.getResponseCode();
             }
-            System.out.println("Отправили");
         }
 
         private String singleLineText(Question question){
-            System.out.println(question.getAnswers().get(0).getName());
-        String str = "{\n" +
-                "\"item_id\":"+question.getId()+",\n" +
-                "\"answer\":{\n" +
-                "\"answer_type\":\"Text\",\n" +
-                "\"text\":\""+question.getAnswers().get(0).getName()+"\",\n" +
-                "\"is_required\":false,\n" +
-                "\"is_soft_required\":false\n" +
-                "}}";
-        return str;
+            return "{\n" +
+                    "\"item_id\":"+question.getId()+",\n" +
+                    "\"answer\":{\n" +
+                    "\"answer_type\":\"Text\",\n" +
+                    "\"text\":\""+question.getAnswers().get(0).getName()+"\",\n" +
+                    "\"is_required\":false,\n" +
+                    "\"is_soft_required\":false\n" +
+                    "}}";
         }
     private String radioButtons(Question question){
-        System.out.println(question.getAnswers().get(0).getName());
-        String str = "{\"item_id\":"+question.getId()+",\n" +
+        return "{\"item_id\":"+question.getId()+",\n" +
                 "\"answer\":{\n" +
                 "\"answer_type\":\"SingleChoice\",\n" +
                 "\"choice_id\":"+question.getAnswers().get(0).getId()+",\n" +
@@ -166,10 +129,8 @@ public class Connection {
                 "\"is_soft_required\":false\n" +
                 "}\n" +
                 "}";
-        return str;
     }
     private String checkboxes(Question question){
-        System.out.println(question.getAnswers().get(0).getName());
         StringBuilder stringBuilder = new StringBuilder("{\n" +
                 "\"item_id\":"+question.getId()+",\n" +
                 "\"answer\":{\n" +
@@ -177,123 +138,43 @@ public class Connection {
                 "\"is_soft_required\":false,\n" +
                 "\"choices\":[\n");
         for (Answer answer: question.getAnswers()){
-            stringBuilder.append("{\n" +
-                    "\"choice_id\":"+answer.getId()+",\n" +
-                    "\"text\":\""+answer.getName()+"\"\n" +
-                    "},");
+            stringBuilder.append("{\n" + "\"choice_id\":").append(answer.getId()).append(",\n")
+                    .append("\"text\":\"").append(answer.getName()).append("\"\n").append("},");
         }
         stringBuilder.deleteCharAt(stringBuilder.length()-1);
-        stringBuilder.append("]\n" +
-                "}\n" +
-                "}");
+        stringBuilder.append("""
+                ]
+                }
+                }""");
         return String.valueOf(stringBuilder);
     }
 
 
-
-
-//    public List<Survey> getSurveys() throws IOException {
-//        URL myURL = new URL(MYURL + "surveys");
-//        HttpURLConnection myURLConnection = (HttpURLConnection) myURL.openConnection();
-//
-//        String basicAuth = "Bearer " + new String(TOKEN);
-//        myURLConnection.setRequestProperty("Accept", "application/json");
-//        myURLConnection.setRequestProperty("Authorization", basicAuth);
-//        myURLConnection.setRequestMethod("GET");
-//        myURLConnection.setUseCaches(false);
-//        myURLConnection.setDoInput(true);
-//        myURLConnection.setDoOutput(true);
-//
-//        List<Survey> surveyList = new ArrayList<>();
-//        try (BufferedReader br = new BufferedReader(
-//                new InputStreamReader(myURLConnection.getInputStream(), "utf-8"))) {
-//            StringBuilder response = new StringBuilder();
-//            String responseLine = null;
-//            while ((responseLine = br.readLine()) != null) {
-//                response.append(responseLine.trim());
-//            }
-//            System.out.println(response.toString());
-//            String res = String.valueOf(response);
-//            JSONObject object = new JSONObject(res);
-//            JSONArray name = object.getJSONArray("items");
-//            Iterator<Object> phonesItr = name.iterator();
-//            System.out.println("Опросы: ");
-//            while (phonesItr.hasNext()) {
-//                JSONObject test = (JSONObject) phonesItr.next();
-//                Survey survey = new Survey();
-//                survey.setName((String) test.get("name"));
-//                survey.setId((Integer) test.get("id"));
-//                surveyList.add(survey);
-//                System.out.println(survey.getName());
-//                System.out.println(survey.getId());
-//            }
-//
-//        }
-//        return surveyList;
-//    }
-
-
     public List<Question> getQuestions(String str) throws IOException {
-        URL myURL = new URL(MYURL + "surveys/" + str + "/pages");
-        HttpURLConnection myURLConnection = (HttpURLConnection) myURL.openConnection();
-
-        String basicAuth = "Bearer " + new String(TOKEN);
-        myURLConnection.setRequestProperty("Accept", "application/json");
-        myURLConnection.setRequestProperty("Authorization", basicAuth);
-        myURLConnection.setRequestMethod("GET");
-        myURLConnection.setUseCaches(false);
-        myURLConnection.setDoInput(true);
-        myURLConnection.setDoOutput(true);
-        List<Question> questionList = new ArrayList<>();
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(myURLConnection.getInputStream(), "utf-8"))) {
-            StringBuilder response = new StringBuilder();
-            String responseLine = null;
-            while ((responseLine = br.readLine()) != null) {
-                response.append(responseLine.trim());
-            }
-
-            JSONArray array = new JSONArray(response.toString());
-            Iterator<Object> pgItr = array.iterator();
-            List<Integer> idList = new ArrayList<>();
-            while (pgItr.hasNext()) {
-                JSONObject test = (JSONObject) pgItr.next();
-                if (test.get("page_type").equals("ContentPage")) {
-                    idList.add((Integer) test.get("id"));
-                }
-            }
-            pagesMap.put(Long.valueOf(str), idList);
-            for (Integer id : idList) {
-                myURL = new URL(MYURL + "surveys/" + str + "/pages/" + id + "/items");
-                myURLConnection = (HttpURLConnection) myURL.openConnection();
-                basicAuth = "Bearer " + new String(TOKEN);
-                myURLConnection.setRequestProperty("Accept", "application/json");
-                myURLConnection.setRequestProperty("Authorization", basicAuth);
-                myURLConnection.setRequestMethod("GET");
-                myURLConnection.setUseCaches(false);
-                myURLConnection.setDoInput(true);
-                myURLConnection.setDoOutput(true);
-
+            List<Question> questionList = new ArrayList<>();
+            List<Integer> pageList = getPages(String.valueOf(str));
+            for (Integer id : pageList) {
+                URL myURL = new URL(MYURL + "surveys/" + str + "/pages/" + id + "/items");
+                HttpURLConnection myURLConnection = createHttpURLConnection(myURL);
                 try (BufferedReader br1 = new BufferedReader(
-                        new InputStreamReader(myURLConnection.getInputStream(), "utf-8"))) {
+                        new InputStreamReader(myURLConnection.getInputStream(), StandardCharsets.UTF_8))) {
                     StringBuilder response1 = new StringBuilder();
-                    String responseLine1 = null;
+                    String responseLine1;
                     while ((responseLine1 = br1.readLine()) != null) {
                         response1.append(responseLine1.trim());
                     }
                     JSONArray array1 = new JSONArray(response1.toString());
-                    Iterator<Object> pgItr1 = array1.iterator();
-                    while (pgItr1.hasNext()) {
-                        JSONObject test = (JSONObject) pgItr1.next();
+                    for (Object o : array1) {
+                        JSONObject test = (JSONObject) o;
                         Question question = new Question();
                         String string = (String) test.get("question_text");
-                        String substr = string.substring(3, string.length()-4);
+                        String substr = string.substring(3, string.length() - 4);
                         question.setName(substr);
                         question.setItem((String) test.get("item_type"));
                         question.setCompleted(false);
                         question.setPage(String.valueOf(id));
                         question.setId(String.valueOf(test.get("id")));
-                        if (!test.get("item_type").equals("SingleLineText") && !test.get("item_type").equals("MultiLineText") ) {
+                        if (!test.get("item_type").equals("SingleLineText") && !test.get("item_type").equals("MultiLineText")) {
                             JSONArray choices = test.getJSONArray("choices");
                             Iterator<Object> chItr = choices.iterator();
                             List<Answer> answerList = new ArrayList<>();
@@ -308,10 +189,40 @@ public class Connection {
                         }
                         questionList.add(question);
                     }
-
+                }
+            }
+        return questionList;
+    }
+    public List<Integer> getPages(String str) throws IOException {
+        URL myURL = new URL(MYURL + "surveys/" + str + "/pages");
+        HttpURLConnection myURLConnection = createHttpURLConnection(myURL);
+        List<Integer> pagesList = new ArrayList<>();
+        try (BufferedReader br = new BufferedReader(
+                new InputStreamReader(myURLConnection.getInputStream(), StandardCharsets.UTF_8))) {
+            StringBuilder response = new StringBuilder();
+            String responseLine;
+            while ((responseLine = br.readLine()) != null) {
+                response.append(responseLine.trim());
+            }
+            JSONArray array = new JSONArray(response.toString());
+            for (Object o : array) {
+                JSONObject test = (JSONObject) o;
+                if (test.get("page_type").equals("ContentPage")) {
+                    pagesList.add((Integer) test.get("id"));
                 }
             }
         }
-        return questionList;
+        return pagesList;
+    }
+    private HttpURLConnection createHttpURLConnection (URL myURL) throws IOException {
+        HttpURLConnection myURLConnection = (HttpURLConnection) myURL.openConnection();
+        String basicAuth = "Bearer " + TOKEN;
+        myURLConnection.setRequestProperty("Accept", "application/json");
+        myURLConnection.setRequestProperty("Authorization", basicAuth);
+        myURLConnection.setRequestMethod("GET");
+        myURLConnection.setUseCaches(false);
+        myURLConnection.setDoInput(true);
+        myURLConnection.setDoOutput(true);
+        return myURLConnection;
     }
 }

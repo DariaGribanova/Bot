@@ -1,38 +1,40 @@
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.TelegramBotsApi;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 
 import java.io.IOException;
 import java.util.*;
 
-
 public class Bot extends TelegramLongPollingBot {
-    private Map<Long, List<Question>> surveyMap = new HashMap<Long, List<Question>>();
-    private Map<Long, List<Question>> answerMap = new HashMap<Long, List<Question>>();
-    private Map<Long, Long> userMap = new HashMap<Long, Long>();
-    private Connection connection = new Connection();
-
-    public static void main(String[] args) {
+    private final Map<Long, List<Question>> surveyMap = new HashMap<>();
+    private final Map<Long, List<Question>> answerMap = new HashMap<>();
+    private final Map<Long, Long> userMap = new HashMap<>();
+    private static final Connection connection = new Connection();
+    public static void main(String[] args) throws IOException {
         try {
             TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
             telegramBotsApi.registerBot(new Bot());
+            connection.getToken();
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
+    @Override
+    public String getBotUsername() {
+        return "CourseworkBot";
+    }
+    @Override
+    public String getBotToken() {
+        return "5596068203:AAGY5IXew9nlQsKmRbdbS56rc5xSCk3PYok";
+    }
 
     @Override
     public void onUpdateReceived(Update update) {
-        System.out.println(update);
         if (update.hasMessage()) {
             Long id = update.getMessage().getFrom().getId();
             if (update.getMessage().hasText()) {
@@ -42,22 +44,11 @@ public class Bot extends TelegramLongPollingBot {
                     case "/start":
                         if (strings[1]!= null) {
                             try {
-                                userMap.remove(id);
-                                answerMap.remove(id);
                                 surveyMap.put(Long.valueOf(strings[1]), connection.getQuestions(strings[1]));
                                 answerMap.put(id, new ArrayList<>());
                                 userMap.put(id, Long.valueOf(strings[1]));
                                 List<Question> questions = surveyMap.get(Long.valueOf(strings[1]));
-                                Question question = questions.get(answerMap.get(id).size());
-                                if (question.getItem().equals("SingleLineText") || question.getItem().equals("MultiLineText")){
-                                    sendMsg(update.getMessage().getFrom().getId(), question.getName());
-                                }
-                                if (question.getItem().equals("RadioButtons")){
-                                    sendKeyboard(update.getMessage().getFrom().getId(), question);
-                                }
-                                if (question.getItem().equals("Checkboxes")){
-                                    sendKeyboard(update.getMessage().getFrom().getId(), question);
-                                }
+                                sendNextQuestion(questions.get(answerMap.get(id).size()), id);
                             } catch (IOException e) {
                                 throw new RuntimeException(e);
                             }
@@ -72,43 +63,17 @@ public class Bot extends TelegramLongPollingBot {
                         }
                         break;
                     default:
-                        if (surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem().equals("SingleLineText") || surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem().equals("MultiLineText")){
-                            //List<Answer> answerList = new ArrayList<>(answerMap.get(id));
+                        if (surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem().equals("SingleLineText") ||
+                                surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem().equals("MultiLineText")){
                             List<Question> questions = new ArrayList<>(answerMap.get(id));
-
                             Answer answer = new Answer(update.getMessage().getText(), update.getMessage().getText());
-                            Question question = new Question();
-                            question.setName(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getName());
-                            question.setItem(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem());
-                            question.setPage(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getPage());
-                            question.setId(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getId());
-                            question.setCompleted(true);
+                            Question question = createQuestion(id, answerMap.get(id).size(), true);
                             List<Answer> answerList = new ArrayList<>(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers());
-                            //List<Answer> answerList = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers();
                             answerList.add(answer);
                             question.setAnswers(answerList);
                             questions.add(question);
-
                             answerMap.put(id, questions);
-                            if (surveyMap.get(userMap.get(id)).size() == answerMap.get(id).size()){
-                                try {
-                                    connection.sendResponse(userMap.get(id), answerMap.get(id));
-                                    sendMsg(update.getMessage().getFrom().getId(), "Опрос пройден!");
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            } else {
-                                Question question1 = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size());
-                                if (question1.getItem().equals("SingleLineText") || question1.getItem().equals("MultiLineText")) {
-                                    sendMsg(update.getMessage().getFrom().getId(), question1.getName());
-                                }
-                                if (question1.getItem().equals("RadioButtons")){
-                                    sendKeyboard(update.getMessage().getFrom().getId(), question1);
-                                }
-                                if (question1.getItem().equals("Checkboxes")){
-                                    sendKeyboard(update.getMessage().getFrom().getId(), question1);
-                                }
-                            }
+                            nextQuestion(id);
                         }
                 }
             }
@@ -117,80 +82,32 @@ public class Bot extends TelegramLongPollingBot {
             String str = update.getCallbackQuery().getData();
             String[] strings = str.split("-");
             switch (strings[0]) {
-                case "token":
-                    try {
-                        connection.getToken();
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                    break;
                 case "question":
                     if (answerMap.get(id).size() == 0 && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem().equals("Checkboxes") && String.valueOf(userMap.get(id)).equals(strings[1]) && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers().contains(new Answer(strings[2], strings[3]))){
                         List<Question> questions = new ArrayList<>(answerMap.get(id));
                         Answer answer = new Answer(strings[2], strings[3]);
-                        Question question = new Question();
-                        question.setName(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getName());
-                        question.setItem(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem());
-                        question.setPage(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getPage());
-                        question.setId(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getId());
-                        question.setCompleted(false);
+                        Question question = createQuestion(id, answerMap.get(id).size(), false);
                         List<Answer> answerList = new ArrayList<>();
-                        //List<Answer> answerList = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers();
                         answerList.add(answer);
                         question.setAnswers(answerList);
                         questions.add(question);
                         answerMap.put(id, questions);
-
                         Question question1 = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1);
                         sendKeyboard2(update.getCallbackQuery().getFrom().getId(), question1);
                     } else if (answerMap.get(id).size() != 0 && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getItem().equals("Checkboxes") && String.valueOf(userMap.get(id)).equals(strings[1]) && !answerMap.get(id).get(answerMap.get(id).size()-1).isCompleted() && strings[2].equals("next")){
-                        System.out.println("Зашёл");
                         List<Question> questions = new ArrayList<>(answerMap.get(id));
-                        Question question = new Question();
-                        question.setName(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getName());
-                        question.setItem(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getItem());
-                        question.setPage(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getPage());
-                        question.setId(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getId());
-                        question.setCompleted(true);
+                        Question question = createQuestion(id, answerMap.get(id).size()-1, true);
                         List<Answer> answerList = answerMap.get(id).get(answerMap.get(id).size()-1).getAnswers();
-                        //answerList.addAll(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getAnswers());
                         question.setAnswers(answerList);
                         questions.remove(questions.size()-1);
                         questions.add(question);
                         answerMap.put(id, questions);
-
-
-                        if (surveyMap.get(userMap.get(id)).size() == answerMap.get(id).size()){
-                            try {
-                                connection.sendResponse(userMap.get(id), answerMap.get(id));
-                                sendMsg(update.getCallbackQuery().getFrom().getId(), "Опрос пройден!");
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        } else {
-                            Question question1 = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size());
-                            if (question1.getItem().equals("SingleLineText") || question1.getItem().equals("MultiLineText")) {
-                                sendMsg(update.getCallbackQuery().getFrom().getId(), question1.getName());
-                            }
-                            if (question1.getItem().equals("RadioButtons")) {
-                                sendKeyboard(update.getCallbackQuery().getFrom().getId(), question1);
-                            }
-                            if (question1.getItem().equals("Checkboxes")) {
-                                sendKeyboard(update.getCallbackQuery().getFrom().getId(), question1);
-                            }
-                        }
-
+                        nextQuestion(id);
                     } else if(answerMap.get(id).size() != 0 && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getItem().equals("Checkboxes") && !answerMap.get(id).get(answerMap.get(id).size()-1).isCompleted() && String.valueOf(userMap.get(id)).equals(strings[1]) && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getAnswers().contains(new Answer(strings[2], strings[3])) ){
                         List<Question> questions = new ArrayList<>(answerMap.get(id));
                         Answer answer = new Answer(strings[2], strings[3]);
-                        Question question = new Question();
-                        question.setName(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getName());
-                        question.setItem(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getItem());
-                        question.setPage(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getPage());
-                        question.setId(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1).getId());
-                        question.setCompleted(false);
+                        Question question = createQuestion(id, answerMap.get(id).size()-1, false);
                         List<Answer> answerList = answerMap.get(id).get(answerMap.get(id).size()-1).getAnswers();
-                        //List<Answer> answerList = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers();
                         answerList.add(answer);
                         question.setAnswers(answerList);
                         questions.remove(questions.size()-1);
@@ -198,109 +115,39 @@ public class Bot extends TelegramLongPollingBot {
                         answerMap.put(id, questions);
                         Question question1 = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1);
                         sendKeyboard2(update.getCallbackQuery().getFrom().getId(), question1);
-
                     } else if(answerMap.get(id).size() != 0 && answerMap.get(id).get(answerMap.get(id).size()-1).isCompleted()) {
                        if (answerMap.get(id).size() != 0 && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem().equals("Checkboxes") && String.valueOf(userMap.get(id)).equals(strings[1]) && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers().contains(new Answer(strings[2], strings[3]))){
                             List<Question> questions = new ArrayList<>(answerMap.get(id));
                             Answer answer = new Answer(strings[2], strings[3]);
-                            Question question = new Question();
-                            question.setName(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getName());
-                            question.setItem(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem());
-                           question.setPage(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getPage());
-                           question.setId(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getId());
-                            question.setCompleted(false);
+                           Question question = createQuestion(id, answerMap.get(id).size(), false);
                             List<Answer> answerList = new ArrayList<>();
-                            //List<Answer> answerList = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers();
                             answerList.add(answer);
                             question.setAnswers(answerList);
                             questions.add(question);
                             answerMap.put(id, questions);
-                           System.out.println(answerMap.get(id));
                             Question question1 = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()-1);
                             sendKeyboard2(update.getCallbackQuery().getFrom().getId(), question1);
                         } else if (surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem().equals("RadioButtons") && String.valueOf(userMap.get(id)).equals(strings[1]) && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers().contains(new Answer(strings[2], strings[3]))) {
                             List<Question> questions = new ArrayList<>(answerMap.get(id));
                             Answer answer = new Answer(strings[2], strings[3]);
-                            Question question = new Question();
-                            question.setName(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getName());
-                            question.setItem(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem());
-                           question.setPage(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getPage());
-                           question.setId(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getId());
-                            question.setCompleted(true);
+                           Question question = createQuestion(id, answerMap.get(id).size(), true);
                             List<Answer> answerList = new ArrayList<>();
-                            //List<Answer> answerList = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers();
                             answerList.add(answer);
                             question.setAnswers(answerList);
                             questions.add(question);
                             answerMap.put(id, questions);
-
-//                        List<Answer> answerList = new ArrayList<>(answerMap.get(id));
-//                        Answer answer = new Answer(strings[1], strings[2]);
-//                        answerList.add(answer);
-//                        System.out.println(answerList);
-//                        answerMap.put(id, answerList);
-                            if (surveyMap.get(userMap.get(id)).size() == answerMap.get(id).size()) {
-                                try {
-                                    connection.sendResponse(userMap.get(id), answerMap.get(id));
-                                    sendMsg(update.getCallbackQuery().getFrom().getId(), "Опрос пройден!");
-                                    System.out.println(answerMap.get(id));
-                                } catch (IOException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            } else {
-                                Question question1 = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size());
-                                if (question1.getItem().equals("SingleLineText") || question1.getItem().equals("MultiLineText")) {
-                                    sendMsg(update.getCallbackQuery().getFrom().getId(), question1.getName());
-                                }
-                                if (question1.getItem().equals("RadioButtons")) {
-                                    sendKeyboard(update.getCallbackQuery().getFrom().getId(), question1);
-                                }
-                                if (question1.getItem().equals("Checkboxes")) {
-                                    sendKeyboard(update.getCallbackQuery().getFrom().getId(), question1);
-                                }
-                            }
+                           nextQuestion(id);
                         }
                     } else if (surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem().equals("RadioButtons") && String.valueOf(userMap.get(id)).equals(strings[1]) && surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers().contains(new Answer(strings[2], strings[3]))){
                         List<Question> questions = new ArrayList<>(answerMap.get(id));
                         Answer answer = new Answer(strings[2], strings[3]);
-                        Question question = new Question();
-                        question.setName(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getName());
-                        question.setItem(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getItem());
-                        question.setPage(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getPage());
-                        question.setId(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getId());
-                        question.setCompleted(true);
+                        Question question = createQuestion(id, answerMap.get(id).size(), true);
                         List<Answer> answerList = new ArrayList<>();
-                        //List<Answer> answerList = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()).getAnswers();
                         answerList.add(answer);
                         question.setAnswers(answerList);
                         questions.add(question);
                         answerMap.put(id, questions);
-
-//                        List<Answer> answerList = new ArrayList<>(answerMap.get(id));
-//                        Answer answer = new Answer(strings[1], strings[2]);
-//                        answerList.add(answer);
-//                        System.out.println(answerList);
-//                        answerMap.put(id, answerList);
-                        if (surveyMap.get(userMap.get(id)).size() == answerMap.get(id).size()) {
-                            try {
-                                connection.sendResponse(userMap.get(id), answerMap.get(id));
-                                sendMsg(update.getCallbackQuery().getFrom().getId(), "Опрос пройден!");
-                                System.out.println(answerMap.get(id));
-                            } catch (IOException e) {
-                                throw new RuntimeException(e);
-                            }
-                        } else {
-                            Question question1 = surveyMap.get(userMap.get(id)).get(answerMap.get(id).size());
-                            if (question1.getItem().equals("SingleLineText") || question1.getItem().equals("MultiLineText")) {
-                                sendMsg(update.getCallbackQuery().getFrom().getId(), question1.getName());
-                            }
-                            if (question1.getItem().equals("RadioButtons")) {
-                                sendKeyboard(update.getCallbackQuery().getFrom().getId(), question1);
-                            }
-                            if (question1.getItem().equals("Checkboxes")) {
-                                sendKeyboard(update.getCallbackQuery().getFrom().getId(), question1);
-                            }
-                        }
+                        nextQuestion(id);
                     }
                     break;
                 default:
@@ -309,7 +156,7 @@ public class Bot extends TelegramLongPollingBot {
     }
 
 
-    public void sendKeyboard(Long id, Question question) {
+    private void sendKeyboard(Long id, Question question) {
         SendMessage sendMessage = new SendMessage();
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowList = new ArrayList<>();
@@ -332,7 +179,7 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    public void sendKeyboard2(Long id, Question question) {
+    private void sendKeyboard2(Long id, Question question) {
         question.getAnswers().removeAll(answerMap.get(id).get(answerMap.get(id).size()-1).getAnswers());
         SendMessage sendMessage = new SendMessage();
         InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
@@ -362,7 +209,7 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    public void sendMsg(Long id, String text) {
+    private void sendMsg(Long id, String text) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.setChatId(id);
         sendMessage.setText(text);
@@ -372,34 +219,39 @@ public class Bot extends TelegramLongPollingBot {
             e.printStackTrace();
         }
     }
-
-    public void setButtons(SendMessage sendMessage) {
-        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-        sendMessage.setReplyMarkup(replyKeyboardMarkup);
-        replyKeyboardMarkup.setSelective(true);
-        replyKeyboardMarkup.setResizeKeyboard(true);
-        replyKeyboardMarkup.setOneTimeKeyboard(false);
-
-        List<KeyboardRow> keyboardRowList = new ArrayList<>();
-        KeyboardRow keyboardFirstRow = new KeyboardRow();
-
-        keyboardFirstRow.add(new KeyboardButton("/help"));
-        keyboardFirstRow.add(new KeyboardButton("/setting"));
-        keyboardFirstRow.add(new KeyboardButton("/start"));
-
-        keyboardRowList.add(keyboardFirstRow);
-        replyKeyboardMarkup.setKeyboard(keyboardRowList);
-
+    private void sendNextQuestion(Question question, Long id) {
+        if (question.getItem().equals("SingleLineText") || question.getItem().equals("MultiLineText")) {
+            sendMsg(id, question.getName());
+        }
+        if (question.getItem().equals("RadioButtons")) {
+            sendKeyboard(id, question);
+        }
+        if (question.getItem().equals("Checkboxes")) {
+            sendKeyboard(id, question);
+        }
     }
-
-    @Override
-    public String getBotUsername() {
-        return "CourseworkBot";
+    private void nextQuestion(Long id) {
+        if (surveyMap.get(userMap.get(id)).size() == answerMap.get(id).size()) {
+            try {
+                connection.sendResponse(userMap.get(id), answerMap.get(id));
+                sendMsg(id, "Опрос пройден!");
+                userMap.remove(id);
+                answerMap.remove(id);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        } else {
+            sendNextQuestion(surveyMap.get(userMap.get(id)).get(answerMap.get(id).size()), id);
+        }
     }
-
-    @Override
-    public String getBotToken() {
-        return "5596068203:AAGY5IXew9nlQsKmRbdbS56rc5xSCk3PYok";
+    private Question createQuestion(Long id, int size, boolean completed) {
+        Question question = new Question();
+        question.setName(surveyMap.get(userMap.get(id)).get(size).getName());
+        question.setItem(surveyMap.get(userMap.get(id)).get(size).getItem());
+        question.setPage(surveyMap.get(userMap.get(id)).get(size).getPage());
+        question.setId(surveyMap.get(userMap.get(id)).get(size).getId());
+        question.setCompleted(completed);
+        return question;
     }
 
 }
